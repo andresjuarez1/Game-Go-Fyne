@@ -61,11 +61,16 @@ func load(filePath string) image.Image {
     return imgData.(image.Image)
 }
 
+func resetPlayerPosition(player *Player) {
+    player.x = 100
+    player.y = 200
+}
+
 func main() {
     myApp := app.New()
     w := myApp.NewWindow("Game")
 
-    obstacleImage := load("img/ramos.png")
+    obstacleImage := load("img/ramos2.png")
 
     background := load("img/background.png")
     playerSprites := load("img/messi.png")
@@ -130,11 +135,20 @@ func main() {
         
         playerRect := image.Rect(player.x, player.y, player.x+player.width, player.y+player.height)
 
+        // for _, obstacle := range obstacles {
+        //     obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
+        
+        //     if playerRect.Overlaps(obstacleRect) {
+        //         // Aquí maneja la colisión, por ejemplo, resta puntos al jugador o reinicia el juego
+        //     }
+        // }
+
         for _, obstacle := range obstacles {
             obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
-        
             if playerRect.Overlaps(obstacleRect) {
-                // Aquí maneja la colisión, por ejemplo, resta puntos al jugador o reinicia el juego
+                // Aquí maneja la colisión, por ejemplo, resta puntos al jugador
+                resetPlayerPosition(player)
+                // Puedes agregar más acciones aquí
             }
         }
     })
@@ -142,23 +156,30 @@ func main() {
     go func() {
         for {
             time.Sleep(time.Millisecond)
-
+    
             now := time.Now().UnixMilli()
             elapsed := now - game.then
-
+    
             if elapsed > fpsInterval {
                 game.then = now
-
+    
                 spriteDP := image.Pt(player.width*player.frameX, player.height*player.frameY)
                 sr := image.Rectangle{spriteDP, spriteDP.Add(spriteSize)}
-
+    
                 dp := image.Pt(player.x, player.y)
                 r := image.Rectangle{dp, dp.Add(spriteSize)}
-
+    
                 draw.Draw(sprite, sprite.Bounds(), image.Transparent, image.ZP, draw.Src)
+    
+                // Dibuja los obstáculos antes de dibujar al jugador
+                for _, obstacle := range obstacles {
+                    obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
+                    draw.Draw(sprite, obstacleRect, obstacleImage, image.Point{}, draw.Over)
+                }
+    
                 draw.Draw(sprite, r, playerSprites, sr.Min, draw.Src)
                 playerImg = canvas.NewRasterFromImage(sprite)
-
+    
                 if player.xMov != 0 || player.yMov != 0 {
                     player.x += player.xMov
                     player.y += player.yMov
@@ -168,11 +189,15 @@ func main() {
                 } else {
                     player.frameX = 0
                 }
-
+    
                 c.Refresh()
             }
         }
+
+
+        
     }()
+    
 
     w.CenterOnScreen()
     w.ShowAndRun()
