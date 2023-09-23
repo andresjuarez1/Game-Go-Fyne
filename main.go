@@ -146,9 +146,7 @@ func main() {
         for _, obstacle := range obstacles {
             obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
             if playerRect.Overlaps(obstacleRect) {
-                // Aquí maneja la colisión, por ejemplo, resta puntos al jugador
                 resetPlayerPosition(player)
-                // Puedes agregar más acciones aquí
             }
         }
     })
