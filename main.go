@@ -6,10 +6,13 @@ import (
     "fyne.io/fyne/v2/app"
     "fyne.io/fyne/v2/canvas"
     "fyne.io/fyne/v2/container"
+    "fyne.io/fyne/v2/widget"
     "fyne.io/fyne/v2/layout"
     "time"
+
     "image"
     "image/draw"
+    "math/rand"
     "image/png"
     "os"
 )
@@ -34,8 +37,18 @@ type Player struct {
 type Obstacle struct {
     x      int
     y      int
-    width  int
-    height int
+    width   int
+    height  int
+    frameX  int
+    frameY  int
+    cyclesX int
+    upY     int
+    downY   int
+    leftY   int
+    rightY  int
+    speed   int
+    xMov    int
+    yMov    int
 }
 
 
@@ -45,6 +58,24 @@ type Game struct {
     fps          int
     then         int64
     margin       int
+}
+
+type Points struct {
+    x        int
+    y        int
+    width    int
+    height   int
+    collected bool
+    // frameX  int
+    // frameY  int
+    // cyclesX int
+    // upY     int
+    // downY   int
+    // leftY   int
+    // rightY  int
+    // speed   int
+    // xMov    int
+    // yMov    int
 }
 
 func load(filePath string) image.Image {
@@ -70,10 +101,13 @@ func main() {
     myApp := app.New()
     w := myApp.NewWindow("Game")
 
-    obstacleImage := load("img/ramos2.png")
+    obstacleImage := load("img/ramos.png")
 
     background := load("img/background.png")
     playerSprites := load("img/messi.png")
+    pointsImage := load("img/pelota.png")
+
+    points := &Points{x: 400, y: 300, width: 40, height: 72, collected: false}
 
     now := time.Now().UnixMilli()
     game := &Game{
@@ -87,8 +121,8 @@ func main() {
     fpsInterval := int64(1000 / game.fps)
 
     obstacles := []Obstacle{
-        {300, 100, 30, 30},
-        {500, 250, 40, 40},
+        {300, 100, 40, 72, 0, 0, 4, 3, 0, 1, 2, 9, 0, 0},
+        {500, 250, 40, 72, 0, 0, 4, 3, 0, 1, 2, 9, 0, 0},
     }    
 
     player := &Player{100, 200, 40, 72, 0, 0, 4, 3, 0, 1, 2, 9, 0, 0}
@@ -100,6 +134,10 @@ func main() {
 
     playerImg := canvas.NewRasterFromImage(sprite)
     spriteSize := image.Pt(player.width, player.height)
+
+    puntos := 0
+    puntosText := widget.NewLabel("Puntos: 0")
+    puntosText.Move(fyne.NewPos(10, 10)) 
 
     c := container.New(layout.NewMaxLayout(), img, playerImg)
     w.SetContent(c)
@@ -134,14 +172,7 @@ func main() {
         }
         
         playerRect := image.Rect(player.x, player.y, player.x+player.width, player.y+player.height)
-
-        // for _, obstacle := range obstacles {
-        //     obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
-        
-        //     if playerRect.Overlaps(obstacleRect) {
-        //         // Aquí maneja la colisión, por ejemplo, resta puntos al jugador o reinicia el juego
-        //     }
-        // }
+        pointsRect := image.Rect(points.x, points.y, points.x+points.width, points.y+points.height)
 
         for _, obstacle := range obstacles {
             obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
@@ -149,6 +180,20 @@ func main() {
                 resetPlayerPosition(player)
             }
         }
+
+        if !points.collected && playerRect.Overlaps(pointsRect) {
+            rand.Seed(time.Now().UnixNano())
+            newX := rand.Intn(int(game.canvasWidth - float32(points.width)))
+            newY := rand.Intn(int(game.canvasHeight - float32(points.height)))
+
+            points.x = newX
+            points.y = newY
+    
+            puntos++
+            puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
+        }
+        c.AddObject(puntosText)
+
     })
 
     go func() {
@@ -189,6 +234,10 @@ func main() {
                 }
     
                 c.Refresh()
+            }
+            if !points.collected {
+                pointsRect := image.Rect(points.x, points.y, points.x+points.width, points.y+points.height)
+                draw.Draw(sprite, pointsRect, pointsImage, image.Point{}, draw.Over)
             }
         }
 
