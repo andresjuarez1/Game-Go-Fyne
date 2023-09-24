@@ -9,7 +9,6 @@ import (
     "fyne.io/fyne/v2/widget"
     "fyne.io/fyne/v2/layout"
     "time"
-
     "image"
     "image/draw"
     "math/rand"
@@ -103,7 +102,7 @@ func main() {
 
     obstacleImage := load("img/ramos.png")
 
-    background := load("img/background.png")
+    background := load("img/background2.png")
     playerSprites := load("img/messi.png")
     pointsImage := load("img/pelota.png")
 
@@ -136,8 +135,9 @@ func main() {
     spriteSize := image.Pt(player.width, player.height)
 
     puntos := 0
-    puntosText := widget.NewLabel("Puntos: 0")
-    puntosText.Move(fyne.NewPos(10, 10)) 
+    puntosText := widget.NewLabel("<font color='red'>Puntos: 0</font>")
+
+    puntosText.Move(fyne.NewPos(10, float32(game.canvasHeight)-puntosText.MinSize().Height-10))
 
     c := container.New(layout.NewMaxLayout(), img, playerImg)
     w.SetContent(c)
@@ -166,18 +166,18 @@ func main() {
             player.frameY = player.rightY
         }
 
-        for _, obstacle := range obstacles {
-            obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
-            draw.Draw(sprite, obstacleRect, obstacleImage, image.Point{}, draw.Over)
-        }
         
         playerRect := image.Rect(player.x, player.y, player.x+player.width, player.y+player.height)
         pointsRect := image.Rect(points.x, points.y, points.x+points.width, points.y+points.height)
 
         for _, obstacle := range obstacles {
             obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
+            draw.Draw(sprite, obstacleRect, obstacleImage, image.Point{}, draw.Over)
+    
             if playerRect.Overlaps(obstacleRect) {
                 resetPlayerPosition(player)
+                puntos-- 
+                puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
             }
         }
 
@@ -240,12 +240,7 @@ func main() {
                 draw.Draw(sprite, pointsRect, pointsImage, image.Point{}, draw.Over)
             }
         }
-
-
-        
     }()
-    
-
     w.CenterOnScreen()
     w.ShowAndRun()
 }
