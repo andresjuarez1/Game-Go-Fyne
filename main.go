@@ -77,6 +77,11 @@ type Points struct {
     // yMov    int
 }
 
+type Marcador struct {
+    x       int
+    y       int
+}
+
 func load(filePath string) image.Image {
     imgFile, err := os.Open(filePath)
     defer imgFile.Close()
@@ -102,7 +107,7 @@ func main() {
 
     obstacleImage := load("img/ramos.png")
 
-    background := load("img/background2.png")
+    background := load("img/background3.png")
     playerSprites := load("img/messi.png")
     pointsImage := load("img/pelota.png")
 
@@ -135,8 +140,7 @@ func main() {
     spriteSize := image.Pt(player.width, player.height)
 
     puntos := 0
-    puntosText := widget.NewLabel("<font color='red'>Puntos: 0</font>")
-
+    puntosText := widget.NewLabel("Puntos: 0")
     puntosText.Move(fyne.NewPos(10, float32(game.canvasHeight)-puntosText.MinSize().Height-10))
 
     c := container.New(layout.NewMaxLayout(), img, playerImg)
