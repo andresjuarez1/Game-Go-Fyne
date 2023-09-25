@@ -8,79 +8,16 @@ import (
     "fyne.io/fyne/v2/container"
     "fyne.io/fyne/v2/widget"
     "fyne.io/fyne/v2/layout"
+    "fyne.io/fyne/v2/dialog"
     "time"
     "image"
     "image/draw"
     "math/rand"
     "image/png"
     "os"
+    
+    "juego2/models"
 )
-
-type Player struct {
-    x       int
-    y       int
-    width   int
-    height  int
-    frameX  int
-    frameY  int
-    cyclesX int
-    upY     int
-    downY   int
-    leftY   int
-    rightY  int
-    speed   int
-    xMov    int
-    yMov    int
-}
-
-type Obstacle struct {
-    x      int
-    y      int
-    width   int
-    height  int
-    frameX  int
-    frameY  int
-    cyclesX int
-    upY     int
-    downY   int
-    leftY   int
-    rightY  int
-    speed   int
-    xMov    int
-    yMov    int
-}
-
-
-type Game struct {
-    canvasWidth  float32
-    canvasHeight float32
-    fps          int
-    then         int64
-    margin       int
-}
-
-type Points struct {
-    x        int
-    y        int
-    width    int
-    height   int
-    collected bool
-    // frameX  int
-    // frameY  int
-    // cyclesX int
-    // upY     int
-    // downY   int
-    // leftY   int
-    // rightY  int
-    // speed   int
-    // xMov    int
-    // yMov    int
-}
-
-type Marcador struct {
-    x       int
-    y       int
-}
 
 func load(filePath string) image.Image {
     imgFile, err := os.Open(filePath)
@@ -96,9 +33,9 @@ func load(filePath string) image.Image {
     return imgData.(image.Image)
 }
 
-func resetPlayerPosition(player *Player) {
-    player.x = 100
-    player.y = 200
+func resetPlayerPosition(player *models.Player) {
+    player.X = 100
+    player.Y = 200
 }
 
 func main() {
@@ -106,30 +43,31 @@ func main() {
     w := myApp.NewWindow("Game")
 
     obstacleImage := load("img/ramos.png")
+    player := models.Player{}
 
     background := load("img/background3.png")
     playerSprites := load("img/messi.png")
     pointsImage := load("img/pelota.png")
 
-    points := &Points{x: 400, y: 300, width: 40, height: 72, collected: false}
+    points := &models.Points{X: 400, Y: 300, Width: 40, Height: 72, Collected: false}
 
     now := time.Now().UnixMilli()
-    game := &Game{
-        800,
-        500,
-        10,
-        now,
-        4,
+    game := &models.Game{
+        CanvasWidth:  800,
+        CanvasHeight: 500,
+        FPS:          10,
+        Then:         now,
+        Margin:       4,
     }
 
-    fpsInterval := int64(1000 / game.fps)
+    fpsInterval := int64(1000 / game.FPS)
 
-    obstacles := []Obstacle{
-        {300, 100, 40, 72, 0, 0, 4, 3, 0, 1, 2, 9, 0, 0},
-        {500, 250, 40, 72, 0, 0, 4, 3, 0, 1, 2, 9, 0, 0},
-    }    
+    obstacles := []models.Obstacle{
+        models.Obstacle{X: 300, Y: 100, Width: 40, Height: 72, FrameX: 0, FrameY: 0, CyclesX: 4, UpY: 3, DownY: 0, LeftY: 1, RightY: 2, Speed: 9, XMov: 0, YMov: 0},
+        models.Obstacle{X: 500, Y: 250, Width: 40, Height: 72, FrameX: 0, FrameY: 0, CyclesX: 4, UpY: 3, DownY: 0, LeftY: 1, RightY: 2, Speed: 9, XMov: 0, YMov: 0},
+    }
 
-    player := &Player{100, 200, 40, 72, 0, 0, 4, 3, 0, 1, 2, 9, 0, 0}
+    player = models.Player{X: 100, Y: 200, Width: 40, Height: 72, FrameX: 0, FrameY: 0, CyclesX: 4, UpY: 3, DownY: 0, LeftY: 1, RightY: 2, Speed: 9, XMov: 0, YMov: 0}
 
     img := canvas.NewImageFromImage(background)
     img.FillMode = canvas.ImageFillOriginal
@@ -137,11 +75,11 @@ func main() {
     sprite := image.NewRGBA(background.Bounds())
 
     playerImg := canvas.NewRasterFromImage(sprite)
-    spriteSize := image.Pt(player.width, player.height)
+    spriteSize := image.Pt(player.Width, player.Height)
 
     puntos := 0
     puntosText := widget.NewLabel("Puntos: 0")
-    puntosText.Move(fyne.NewPos(10, float32(game.canvasHeight)-puntosText.MinSize().Height-10))
+    puntosText.Move(fyne.NewPos(10, float32(game.CanvasHeight)-puntosText.MinSize().Height-10))
 
     c := container.New(layout.NewMaxLayout(), img, playerImg)
     w.SetContent(c)
@@ -149,98 +87,106 @@ func main() {
     w.Canvas().SetOnTypedKey(func(k *fyne.KeyEvent) {
         switch k.Name {
         case fyne.KeyDown:
-            if player.y+player.speed+player.height <= int(game.canvasHeight)-player.height-game.margin {
-                player.yMov = player.speed
+            if player.Y+player.Speed+player.Height <= int(game.CanvasHeight)-player.Height-game.Margin {
+                player.YMov = player.Speed
             }
-            player.frameY = player.downY
+            player.FrameY = player.DownY
         case fyne.KeyUp:
-            if player.y-player.speed >= 0 {
-                player.yMov = -player.speed
+            if player.Y-player.Speed >= 0 {
+                player.YMov = -player.Speed
             }
-            player.frameY = player.upY
+            player.FrameY = player.UpY
         case fyne.KeyLeft:
-            if player.x-player.speed >= game.margin {
-                player.xMov = -player.speed
+            if player.X-player.Speed >= game.Margin {
+                player.XMov = -player.Speed
             }
-            player.frameY = player.leftY
+            player.FrameY = player.LeftY
         case fyne.KeyRight:
-            if player.x+player.speed+player.width <= int(game.canvasWidth)-game.margin {
-                player.xMov = player.speed
+            if player.X+player.Speed+player.Width <= int(game.CanvasWidth)-game.Margin {
+                player.XMov = player.Speed
             }
-            player.frameY = player.rightY
+            player.FrameY = player.RightY
         }
 
-        
-        playerRect := image.Rect(player.x, player.y, player.x+player.width, player.y+player.height)
-        pointsRect := image.Rect(points.x, points.y, points.x+points.width, points.y+points.height)
+        playerRect := image.Rect(player.X, player.Y, player.X+player.Width, player.Y+player.Height)
+        pointsRect := image.Rect(points.X, points.Y, points.X+points.Width, points.Y+points.Height)
 
         for _, obstacle := range obstacles {
-            obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
+            obstacleRect := image.Rect(obstacle.X, obstacle.Y, obstacle.X+obstacle.Width, obstacle.Y+obstacle.Height)
             draw.Draw(sprite, obstacleRect, obstacleImage, image.Point{}, draw.Over)
-    
             if playerRect.Overlaps(obstacleRect) {
-                resetPlayerPosition(player)
-                puntos-- 
+                resetPlayerPosition(&player)
+                puntos--
+                if puntos == -1 {
+                    dialog.ShowInformation("Juego Terminado", "Perdiste el juego. Tu puntuación es -1.", w)
+                    break
+                }
                 puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
             }
         }
 
-        if !points.collected && playerRect.Overlaps(pointsRect) {
+        if !points.Collected && playerRect.Overlaps(pointsRect) {
             rand.Seed(time.Now().UnixNano())
-            newX := rand.Intn(int(game.canvasWidth - float32(points.width)))
-            newY := rand.Intn(int(game.canvasHeight - float32(points.height)))
+            newX := rand.Intn(int(game.CanvasWidth - float32(points.Width)))
+            newY := rand.Intn(int(game.CanvasHeight - float32(points.Height)))
 
-            points.x = newX
-            points.y = newY
-    
+            points.X = newX
+            points.Y = newY
+
             puntos++
             puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
         }
         c.AddObject(puntosText)
-
     })
 
     go func() {
         for {
             time.Sleep(time.Millisecond)
-    
+
             now := time.Now().UnixMilli()
-            elapsed := now - game.then
-    
+            elapsed := now - game.Then
+
             if elapsed > fpsInterval {
-                game.then = now
-    
-                spriteDP := image.Pt(player.width*player.frameX, player.height*player.frameY)
+                game.Then = now
+
+                spriteDP := image.Pt(player.Width*player.FrameX, player.Height*player.FrameY)
                 sr := image.Rectangle{spriteDP, spriteDP.Add(spriteSize)}
-    
-                dp := image.Pt(player.x, player.y)
+
+                if puntos >= 5 {
+                    dialog.ShowInformation("¡Felicidades!", "¡Ganaste el juego con 5 puntos!", w)
+                    break
+                }
+
+                dp := image.Pt(player.X, player.Y)
                 r := image.Rectangle{dp, dp.Add(spriteSize)}
-    
+
                 draw.Draw(sprite, sprite.Bounds(), image.Transparent, image.ZP, draw.Src)
-    
-                // Dibuja los obstáculos antes de dibujar al jugador
+
                 for _, obstacle := range obstacles {
-                    obstacleRect := image.Rect(obstacle.x, obstacle.y, obstacle.x+obstacle.width, obstacle.y+obstacle.height)
+                    obstacleRect := image.Rect(obstacle.X, obstacle.Y, obstacle.X+obstacle.Width, obstacle.Y+obstacle.Height)
                     draw.Draw(sprite, obstacleRect, obstacleImage, image.Point{}, draw.Over)
                 }
-    
+
                 draw.Draw(sprite, r, playerSprites, sr.Min, draw.Src)
                 playerImg = canvas.NewRasterFromImage(sprite)
-    
-                if player.xMov != 0 || player.yMov != 0 {
-                    player.x += player.xMov
-                    player.y += player.yMov
-                    player.frameX = (player.frameX + 1) % player.cyclesX
-                    player.xMov = 0
-                    player.yMov = 0
+
+                if player.XMov != 0 || player.YMov != 0 {
+                    player.X += player.XMov
+                    player.Y += player.YMov
+                    player.FrameX = (player.FrameX + 1) % player.CyclesX
+                    player.XMov = 0
+                    player.YMov = 0
                 } else {
-                    player.frameX = 0
+                    player.FrameX = 0
                 }
-    
+                if puntos == -1 {
+                    dialog.ShowInformation("Juego Terminado", "Perdiste el juego. Tu puntuación es -1.", w)
+                    break 
+                }
                 c.Refresh()
             }
-            if !points.collected {
-                pointsRect := image.Rect(points.x, points.y, points.x+points.width, points.y+points.height)
+            if !points.Collected {
+                pointsRect := image.Rect(points.X, points.Y, points.X+points.Width, points.Y+points.Height)
                 draw.Draw(sprite, pointsRect, pointsImage, image.Point{}, draw.Over)
             }
         }
