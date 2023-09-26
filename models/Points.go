@@ -13,4 +13,3 @@ type Marcador struct {
     y int
 }
 
-// Agrega aquí métodos para el marcador si es necesario.

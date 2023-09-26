@@ -78,66 +78,75 @@ func main() {
     spriteSize := image.Pt(player.Width, player.Height)
 
     puntos := 0
-    puntosText := widget.NewLabel("Puntos: 0")
-    puntosText.Move(fyne.NewPos(10, float32(game.CanvasHeight)-puntosText.MinSize().Height-10))
-
-    c := container.New(layout.NewMaxLayout(), img, playerImg)
+    puntosText := widget.NewLabel(fmt.Sprintf("Puntos: %d", puntos))
+    puntosText.Move(fyne.NewPos(10, 10)) // Posición en la esquina superior izquierda
+    puntosText.TextStyle = fyne.TextStyle{Bold: true}
+    c := container.New(layout.NewMaxLayout(), img, playerImg, puntosText)
     w.SetContent(c)
 
-    w.Canvas().SetOnTypedKey(func(k *fyne.KeyEvent) {
-        switch k.Name {
-        case fyne.KeyDown:
-            if player.Y+player.Speed+player.Height <= int(game.CanvasHeight)-player.Height-game.Margin {
-                player.YMov = player.Speed
-            }
-            player.FrameY = player.DownY
-        case fyne.KeyUp:
-            if player.Y-player.Speed >= 0 {
-                player.YMov = -player.Speed
-            }
-            player.FrameY = player.UpY
-        case fyne.KeyLeft:
-            if player.X-player.Speed >= game.Margin {
-                player.XMov = -player.Speed
-            }
-            player.FrameY = player.LeftY
-        case fyne.KeyRight:
-            if player.X+player.Speed+player.Width <= int(game.CanvasWidth)-game.Margin {
-                player.XMov = player.Speed
-            }
-            player.FrameY = player.RightY
-        }
+    gameActions := make(chan fyne.KeyEvent)
+    updateScreen := make(chan struct{})
 
-        playerRect := image.Rect(player.X, player.Y, player.X+player.Width, player.Y+player.Height)
-        pointsRect := image.Rect(points.X, points.Y, points.X+points.Width, points.Y+points.Height)
-
-        for _, obstacle := range obstacles {
-            obstacleRect := image.Rect(obstacle.X, obstacle.Y, obstacle.X+obstacle.Width, obstacle.Y+obstacle.Height)
-            draw.Draw(sprite, obstacleRect, obstacleImage, image.Point{}, draw.Over)
-            if playerRect.Overlaps(obstacleRect) {
-                resetPlayerPosition(&player)
-                puntos--
-                if puntos == -1 {
-                    dialog.ShowInformation("Juego Terminado", "Perdiste el juego. Tu puntuación es -1.", w)
-                    break
+    go func() {
+        for {
+            select {
+            case k := <-gameActions:
+                // Manejar las acciones del jugador
+                // Actualizar la lógica del juego en respuesta a la entrada del usuario
+                switch k.Name {
+                case fyne.KeyDown:
+                    if player.Y+player.Speed+player.Height <= int(game.CanvasHeight)-player.Height-game.Margin {
+                        player.YMov = player.Speed
+                    }
+                    player.FrameY = player.DownY
+                case fyne.KeyUp:
+                    if player.Y-player.Speed >= 0 {
+                        player.YMov = -player.Speed
+                    }
+                    player.FrameY = player.UpY
+                case fyne.KeyLeft:
+                    if player.X-player.Speed >= game.Margin {
+                        player.XMov = -player.Speed
+                    }
+                    player.FrameY = player.LeftY
+                case fyne.KeyRight:
+                    if player.X+player.Speed+player.Width <= int(game.CanvasWidth)-game.Margin {
+                        player.XMov = player.Speed
+                    }
+                    player.FrameY = player.RightY
                 }
-                puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
+
+                playerRect := image.Rect(player.X, player.Y, player.X+player.Width, player.Y+player.Height)
+                pointsRect := image.Rect(points.X, points.Y, points.X+points.Width, points.Y+points.Height)
+
+                for _, obstacle := range obstacles {
+                    obstacleRect := image.Rect(obstacle.X, obstacle.Y, obstacle.X+obstacle.Width, obstacle.Y+obstacle.Height)
+                    draw.Draw(sprite, obstacleRect, obstacleImage, image.Point{}, draw.Over)
+                    if playerRect.Overlaps(obstacleRect) {
+                        resetPlayerPosition(&player)
+                        puntos--
+                        if puntos == -1 {
+                            dialog.ShowInformation("Juego Terminado", "Perdiste el juego. Tu puntuación es -1.", w)
+                            break
+                        }
+                        puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
+                    }
+                }
+
+                if !points.Collected && playerRect.Overlaps(pointsRect) {
+                    rand.Seed(time.Now().UnixNano())
+                    newX := rand.Intn(int(game.CanvasWidth - float32(points.Width)))
+                    newY := rand.Intn(int(game.CanvasHeight - float32(points.Height)))
+
+                    points.X = newX
+                    points.Y = newY
+
+                    puntos++
+                    puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
+                }
             }
         }
-
-        if !points.Collected && playerRect.Overlaps(pointsRect) {
-            rand.Seed(time.Now().UnixNano())
-            newX := rand.Intn(int(game.CanvasWidth - float32(points.Width)))
-            newY := rand.Intn(int(game.CanvasHeight - float32(points.Height)))
-
-            points.X = newX
-            points.Y = newY
-
-            puntos++
-            puntosText.SetText(fmt.Sprintf("Puntos: %d", puntos))
-        }
-        c.AddObject(puntosText)
-    })
+    }()
 
     go func() {
         for {
@@ -183,7 +192,7 @@ func main() {
                     dialog.ShowInformation("Juego Terminado", "Perdiste el juego. Tu puntuación es -1.", w)
                     break 
                 }
-                c.Refresh()
+                updateScreen <- struct{}{}
             }
             if !points.Collected {
                 pointsRect := image.Rect(points.X, points.Y, points.X+points.Width, points.Y+points.Height)
@@ -191,6 +200,18 @@ func main() {
             }
         }
     }()
+    
+    w.Canvas().SetOnTypedKey(func(k *fyne.KeyEvent) {
+        gameActions <- *k
+    })
+
+    go func() {
+        for {
+            <-updateScreen
+            c.Refresh()
+        }
+    }()
+
     w.CenterOnScreen()
     w.ShowAndRun()
 }
