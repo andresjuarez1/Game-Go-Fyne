@@ -70,8 +70,8 @@ func main() {
     obstacleImage := load("img/ramos.png")
     player := models.Player{}
 
-    background := load("img/background3.png")
-    playerSprites := load("img/messi.png")
+    background := load("img/background.png")
+    playerSprites := load("img/newMessi2.png")
     pointsImage := load("img/pelota.png")
 
     points := &models.Points{X: 400, Y: 300, Width: 40, Height: 72, Collected: false}
@@ -113,7 +113,7 @@ func main() {
     updateScreen := make(chan struct{})
 
     go func() {
-        context, decoder, audioFile, err := loadAudio("music/music.mp3")
+        context, decoder, audioFile, err := loadAudio("music/music3.mp3")
         if err != nil {
             log.Fatal("Error cargando la música:", err)
         }
