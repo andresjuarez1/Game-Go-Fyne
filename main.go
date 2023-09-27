@@ -16,8 +16,33 @@ import (
     "image/png"
     "os"
     
+    "log"
     "juego2/models"
+    "github.com/hajimehoshi/oto"
+    "github.com/hajimehoshi/go-mp3"
+    "io"
 )
+
+func loadAudio(filePath string) (*oto.Context, *mp3.Decoder, *os.File, error) {
+    audioFile, err := os.Open(filePath)
+    if err != nil {
+        return nil, nil, nil, err
+    }
+
+    decoder, err := mp3.NewDecoder(audioFile)
+    if err != nil {
+        audioFile.Close()
+        return nil, nil, nil, err
+    }
+
+    context, err := oto.NewContext(decoder.SampleRate(), 2, 2, 8192)
+    if err != nil {
+        audioFile.Close()
+        return nil, nil, nil, err
+    }
+
+    return context, decoder, audioFile, nil
+}
 
 func load(filePath string) image.Image {
     imgFile, err := os.Open(filePath)
@@ -87,6 +112,22 @@ func main() {
     gameActions := make(chan fyne.KeyEvent)
     updateScreen := make(chan struct{})
 
+    go func() {
+        context, decoder, audioFile, err := loadAudio("music/music.mp3")
+        if err != nil {
+            log.Fatal("Error cargando la música:", err)
+        }
+
+        defer context.Close()
+        defer audioFile.Close()
+
+        player := context.NewPlayer()
+
+        if _, err := io.Copy(player, decoder); err != nil {
+            log.Fatal("Error reproduciendo la música:", err)
+        }
+    }()
+    
     go func() {
         for {
             select {
