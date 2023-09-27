@@ -79,7 +79,7 @@ func main() {
 
     puntos := 0
     puntosText := widget.NewLabel(fmt.Sprintf("Puntos: %d", puntos))
-    puntosText.Move(fyne.NewPos(10, 10)) // Posición en la esquina superior izquierda
+    puntosText.Move(fyne.NewPos(10, 10))
     puntosText.TextStyle = fyne.TextStyle{Bold: true}
     c := container.New(layout.NewMaxLayout(), img, playerImg, puntosText)
     w.SetContent(c)
@@ -91,8 +91,6 @@ func main() {
         for {
             select {
             case k := <-gameActions:
-                // Manejar las acciones del jugador
-                // Actualizar la lógica del juego en respuesta a la entrada del usuario
                 switch k.Name {
                 case fyne.KeyDown:
                     if player.Y+player.Speed+player.Height <= int(game.CanvasHeight)-player.Height-game.Margin {
